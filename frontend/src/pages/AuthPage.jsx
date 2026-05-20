@@ -15,9 +15,23 @@ const AuthPage = () => {
     location: ''
   });
 
-  const { login, register, error: authError, setError: setAuthError } = useAuth();
+  const { login, register, loginWithGoogle, error: authError, setError: setAuthError } = useAuth();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const result = await loginWithGoogle();
+      if (result.success) {
+        navigate('/');
+      }
+    } catch (err) {
+      console.error('Google login error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -242,6 +256,34 @@ const AuthPage = () => {
             )}
           </button>
         </form>
+
+        <div className="relative flex items-center justify-center my-5">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-800"></div>
+          </div>
+          <span className="relative px-3 text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-900/80 backdrop-blur-xl">
+            or
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className="w-full bg-slate-950/40 hover:bg-slate-950/80 text-white font-semibold py-3.5 rounded-xl border border-slate-800/80 hover:border-slate-700 transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50"
+        >
+          <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+            <path
+              fill="#EA4335"
+              d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.524 0-6.386-2.862-6.386-6.386 0-3.524 2.862-6.386 6.386-6.386 1.63 0 3.116.618 4.256 1.63l2.97-2.97C19.262 2.612 15.932 1.5 12.24 1.5 6.446 1.5 1.75 6.196 1.75 12s4.696 10.5 10.49 10.5c6.046 0 10.05-4.246 10.05-10.222 0-.693-.075-1.353-.21-1.993H12.24z"
+            />
+          </svg>
+          {loading ? (
+            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          ) : (
+            'Continue with Google'
+          )}
+        </button>
       </div>
     </div>
   );

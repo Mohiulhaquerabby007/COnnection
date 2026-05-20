@@ -4,7 +4,8 @@ import {
   loginUser,
   logoutUser,
   refreshToken,
-  getMe
+  getMe,
+  firebaseLogin
 } from '../controllers/authController.js';
 import {
   registerValidator,
@@ -18,6 +19,7 @@ router.post('/register', registerValidator, registerUser);
 router.post('/login', loginValidator, loginUser);
 router.post('/logout', logoutUser);
 router.post('/refresh', refreshToken);
+router.post('/firebase', firebaseLogin);
 router.get('/me', protectRoute, getMe);
 
 export default router;

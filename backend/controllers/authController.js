@@ -6,6 +6,7 @@ import {
   sendRefreshTokenCookie
 } from '../utils/jwt.js';
 import jwt from 'jsonwebtoken';
+import admin from 'firebase-admin';
 
 /**
  * @desc    Register a new user
@@ -187,6 +188,99 @@ export const getMe = async (req, res, next) => {
     res.status(200).json({
       success: true,
       user: req.user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Authenticate with Firebase ID Token (Google Sign-In)
+ * @route   POST /api/auth/firebase
+ * @access  Public
+ */
+export const firebaseLogin = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Firebase ID Token is required'
+      });
+    }
+
+    let email, name, picture;
+
+    // Check if Firebase Admin is initialized with real credentials
+    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        email = decodedToken.email;
+        name = decodedToken.name || email.split('@')[0];
+        picture = decodedToken.picture;
+      } catch (err) {
+        console.error('Firebase token verification error:', err.message);
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid Firebase ID Token: ' + err.message
+        });
+      }
+    } else {
+      // ───────────────────────────────────────────────────────────────
+      // SIMULATED SANDBOX MODE: works without Firebase credentials
+      // Frontend sends a JSON-stringified mock token for local dev
+      // ───────────────────────────────────────────────────────────────
+      console.log('[Firebase] Sandbox mode: simulating token verification...');
+      try {
+        if (idToken.startsWith('{')) {
+          const parsed = JSON.parse(idToken);
+          email = parsed.email || 'alex@example.com';
+          name = parsed.name || email.split('@')[0];
+          picture = parsed.picture;
+        } else {
+          email = idToken.includes('@') ? idToken : 'alex@example.com';
+          name = email.split('@')[0];
+        }
+      } catch (e) {
+        email = 'alex@example.com';
+        name = 'Alex';
+      }
+    }
+
+    // Find existing user or register them automatically
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Auto-register: generate a secure random password since Google users won't use password login
+      const randomPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+      user = await User.create({
+        email,
+        password: hashedPassword,
+        name: name || email.split('@')[0],
+        age: 18,
+        gender: 'other',
+        preference: 'both',
+        bio: "Hey! I joined via Google. Let's connect!",
+        interests: ['Socializing'],
+        photos: picture
+          ? [{ url: picture }]
+          : [{ url: 'https://placehold.co/600x600/png?text=' + encodeURIComponent(name || 'User') }],
+        location: 'Not specified'
+      });
+    }
+
+    // Issue standard MERN JWT tokens
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+    sendRefreshTokenCookie(res, refreshToken);
+
+    res.status(200).json({
+      success: true,
+      user,
+      accessToken
     });
   } catch (error) {
     next(error);

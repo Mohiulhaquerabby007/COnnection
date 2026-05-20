@@ -4,9 +4,13 @@ import dotenv from 'dotenv';
 import app from './app.js';
 import connectDB from './config/db.js';
 import socketHandler from './sockets/socketHandler.js';
+import initFirebaseAdmin from './config/firebaseAdmin.js';
 
 // Load environment variables
 dotenv.config();
+
+// Initialize Firebase Admin SDK
+initFirebaseAdmin();
 
 // Establish Database Connection
 connectDB();
